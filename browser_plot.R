@@ -70,38 +70,22 @@ browser_plotter <-
             # sample (for faceting), and strand
             
             # Determining if all data in dataset.grlist is stranded or unstranded
-            # Getting vector of unique values in the strand 
-            # field across all GR objects in list
-                
-            .get_strand <- function(gr){
-                # Input: GRanges object
-                # Output: Chr vector of all unique values in the strand column
-                return(unique(strand(gr)))
+            is_stranded <- function(x) {
+                strands <- levels(droplevels(strand(x)))
+                if (!"*" %in% strands)
+                    return(TRUE)
+                if (length(strands) > 1)
+                    stop("Cannot mix stranded and unstranded ranges 
+                         within the same GRanges object")
+                return(FALSE)
             }
-            
-            strand.chr <-
-                as.character(unique(mclapply(dataset.grlist[[signal_name]], .get_strand))[[1]])
-            
-            # initializing values
-            stranded = FALSE
-            unstranded = FALSE
-            
-            # If stranded, setting stranded = T
-            if("+" %in% strand.chr & "-" %in% strand.chr & !("*" %in% strand.chr)) {
-                stranded = TRUE
-            }
-            
-            # If unstranded, setting unstranded = T
-            if(!("+" %in% strand.chr) & !("-" %in% strand.chr) & "*" %in% strand.chr) {
-                unstranded = TRUE
-            }
-            
-            # Throwing stop error if stranded or unstranded isn't set
-            if (!(stranded | unstranded)) {
-                stop(
-                    "Your GRanges data isn't consistantly stranded/unstranded. It is okay to have a list of lists, but each sublist must have only the same type of data"
-                )
-            }
+            stranded <- unique(sapply(dataset.grlist[[signal_name]], is_stranded))
+
+            if (length(stranded) > 1)
+                stop("Each sublist of GRanges data must be 
+                     consistently stranded or unstranded.")
+
+            unstranded <- !stranded
             
             # Function for getting list of signal matrices
             # TODO implement with future_map or mclapply for speed
